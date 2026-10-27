@@ -1,0 +1,81 @@
+
+name: 同步 apilinks 配置
+
+on:
+  schedule:
+    # 每天北京时间 03:10（UTC 19:10）
+    - cron: "10 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tvbox-repo-write
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 检出当前仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 下载上游 apilinks.txt
+        run: |
+          set -euo pipefail
+
+          SOURCE_URL="https://raw.githubusercontent.com/lubin776/tvbox-api-backup/main/apilinks.txt"
+          TEMP_FILE="$(mktemp)"
+
+          trap 'rm -f "$TEMP_FILE"' EXIT
+
+          curl --fail --location --silent --show-error \
+            --retry 3 --retry-delay 2 \
+            "$SOURCE_URL" \
+            --output "$TEMP_FILE"
+
+          if [ ! -s "$TEMP_FILE" ]; then
+            echo "::error::下载的 apilinks.txt 为空，取消同步"
+            exit 1
+          fi
+
+          if ! grep -q '[^[:space:]]' "$TEMP_FILE"; then
+            echo "::error::文件没有有效内容，取消同步"
+            exit 1
+          fi
+
+          cp "$TEMP_FILE" apilinks.txt
+          echo "上游 apilinks.txt 下载成功"
+
+      - name: 检查内容变化
+        id: changes
+        run: |
+          if git diff --quiet -- apilinks.txt; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "apilinks.txt 没有变化"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "apilinks.txt 有变化"
+            git diff --stat -- apilinks.txt
+          fi
+
+      - name: 提交并推送
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- apilinks.txt
+          git commit -m "chore: 同步上游 apilinks.txt"
+
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: 同步结果
+        run: |
+          echo "apilinks.txt 同步流程完成"
