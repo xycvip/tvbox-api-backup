@@ -1,0 +1,81 @@
+name: 自动生成接口清单 Tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tvbox/*.json'
+      - 'tvbox/**/*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 获取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 生成接口清单说明
+        env:
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from urllib.parse import quote
+
+          repo = os.environ["REPO"]
+          sha = os.environ["SHA"]
+
+          lines = [
+              "# TVBox 接口地址清单",
+              "",
+              "本清单由 GitHub Actions 自动生成。",
+              ""
+          ]
+
+          files = sorted(Path("tvbox").rglob("*.json"))
+
+          for p in files:
+              name = p.relative_to("tvbox").as_posix()
+              display_name = name[:-5] if name.endswith(".json") else name
+
+              url = (
+                  f"https://raw.githubusercontent.com/"
+                  f"{repo}/{sha}/tvbox/{quote(name, safe='/')}"
+              )
+
+              lines.extend([
+                  f"## {display_name}：",
+                  "",
+                  url,
+                  ""
+              ])
+
+          Path("release-notes.md").write_text(
+              "\n".join(lines),
+              encoding="utf-8"
+          )
+
+          print(f"已生成 {len(files)} 个接口地址")
+
+          if not files:
+              raise SystemExit("错误：tvbox 目录中没有找到 JSON 文件")
+          PY
+
+      - name: 创建 Tag 和 Release 说明
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          TAG="接口清单-$(date -u +'%Y%m%d-%H%M%S')"
+
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "TVBox 接口清单 $TAG" \
+            --notes-file release-notes.md
