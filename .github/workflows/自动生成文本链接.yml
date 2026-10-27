@@ -29,7 +29,6 @@ jobs:
           import os
           import subprocess
           from pathlib import Path
-          from urllib.parse import quote
 
           repo = os.environ["REPO"]
 
@@ -37,8 +36,8 @@ jobs:
               "# TVBox 接口地址清单",
               "",
               "本清单由 GitHub Actions 自动生成。",
-              "仓库链接同时提供原始地址和代理地址。",
-              "检测结果仅代表本次请求情况。",
+              "仓库 JSON 同时提供原始链接和代理链接。",
+              "检测结果仅代表本次检测情况。",
               "",
               "# 一、仓库 JSON 文件",
               ""
@@ -74,8 +73,10 @@ jobs:
 
                   if code.isdigit():
                       number = int(code)
+
                       if 200 <= number < 400:
                           return f"HTTP {code}（可访问）"
+
                       if number > 0:
                           return f"HTTP {code}（需检查）"
 
@@ -83,6 +84,7 @@ jobs:
 
               except subprocess.TimeoutExpired:
                   return "检测超时"
+
               except Exception as e:
                   return f"检测异常：{e}"
 
@@ -94,23 +96,29 @@ jobs:
                   ""
               ])
 
-          files = sorted(Path("tvbox").rglob("*.json"))
+          # 一、生成仓库 JSON 链接
+          tvbox_dir = Path("tvbox")
+
+          if tvbox_dir.exists():
+              files = sorted(tvbox_dir.rglob("*.json"))
+          else:
+              files = []
 
           for p in files:
-              name = p.relative_to("tvbox").as_posix()
-              display_name = name[:-5] if name.endswith(".json") else name
+              name = p.relative_to(tvbox_dir).as_posix()
 
-              # 中文名称直接显示；特殊字符进行必要的 URL 编码
-              encoded_name = quote(name, safe="/-_.~")
+              # 标题显示中文文件名，不带 .json
+              display_name = name[:-5]
 
+              # 不对中文文件名进行百分号编码
               raw_url = (
                   f"https://raw.githubusercontent.com/"
-                  f"{repo}/main/tvbox/{encoded_name}"
+                  f"{repo}/main/tvbox/{name}"
               )
 
+              # 代理链接
               proxy_url = (
-                  "https://githubproxy.cc/"
-                  + raw_url
+                  "https://githubproxy.cc/" + raw_url
               )
 
               lines.extend([
@@ -121,10 +129,11 @@ jobs:
               add_link("原始链接", raw_url)
               add_link("代理链接", proxy_url)
 
+          # 二、读取 apilinks.txt 中的原始接口
           lines.extend([
               "# 二、apilinks.txt 原始接口",
               "",
-              "以下保留 apilinks.txt 中的原始链接。",
+              "以下保留 apilinks.txt 中配置的原始接口地址。",
               ""
           ])
 
@@ -138,15 +147,20 @@ jobs:
 
                   line = raw_line.strip()
 
+                  # 跳过空行和注释
                   if not line or line.startswith("#"):
                       continue
 
-                  parts = [item.strip() for item in line.split(",")]
+                  parts = [
+                      item.strip()
+                      for item in line.split(",")
+                  ]
 
                   if len(parts) < 2:
                       continue
 
                   name = parts[0]
+
                   urls = [
                       item for item in parts[1:]
                       if item.startswith(("http://", "https://"))
@@ -161,11 +175,11 @@ jobs:
                   ])
 
                   for index, url in enumerate(urls, start=1):
-                      label = (
-                          f"原始链接 {index}"
-                          if len(urls) > 1
-                          else "原始链接"
-                      )
+                      if len(urls) > 1:
+                          label = f"原始链接 {index}"
+                      else:
+                          label = "原始链接"
+
                       add_link(label, url)
                       api_count += 1
 
@@ -175,6 +189,7 @@ jobs:
                   ""
               ])
 
+          # 写入 Release 说明
           Path("release-notes.md").write_text(
               "\n".join(lines),
               encoding="utf-8"
@@ -184,7 +199,9 @@ jobs:
           print(f"apilinks.txt 原始链接数量：{api_count}")
 
           if not files and api_count == 0:
-              raise SystemExit("没有找到可生成的接口")
+              raise SystemExit(
+                  "错误：没有找到可生成的接口"
+              )
           PY
 
       - name: 创建 Tag 和 Release 说明
