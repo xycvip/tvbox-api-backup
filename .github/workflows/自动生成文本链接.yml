@@ -24,22 +24,21 @@ jobs:
       - name: 生成清单并检测链接
         env:
           REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
         run: |
           python3 - <<'PY'
           import os
           import subprocess
           from pathlib import Path
+          from urllib.parse import quote
 
           repo = os.environ["REPO"]
-          sha = os.environ["SHA"]
 
           lines = [
               "# TVBox 接口地址清单",
               "",
               "本清单由 GitHub Actions 自动生成。",
-              "",
-              "连通性检测仅代表本次请求结果。",
+              "仓库链接同时提供原始地址和代理地址。",
+              "检测结果仅代表本次请求情况。",
               "",
               "# 一、仓库 JSON 文件",
               ""
@@ -69,16 +68,14 @@ jobs:
 
                   if result.returncode != 0:
                       reason = result.stderr.strip()
-                      if not reason:
-                          reason = f"curl 错误 {result.returncode}"
-                      return f"连接失败：{reason}"
+                      return "连接失败：" + (
+                          reason or f"curl 错误 {result.returncode}"
+                      )
 
                   if code.isdigit():
                       number = int(code)
-
                       if 200 <= number < 400:
                           return f"HTTP {code}（可访问）"
-
                       if number > 0:
                           return f"HTTP {code}（需检查）"
 
@@ -89,30 +86,40 @@ jobs:
               except Exception as e:
                   return f"检测异常：{e}"
 
+          def add_link(label, url):
+              lines.extend([
+                  f"{label}：",
+                  url,
+                  f"检测结果：{check_url(url)}",
+                  ""
+              ])
+
           files = sorted(Path("tvbox").rglob("*.json"))
 
           for p in files:
               name = p.relative_to("tvbox").as_posix()
-              display_name = (
-                  name[:-5] if name.endswith(".json") else name
-              )
+              display_name = name[:-5] if name.endswith(".json") else name
 
-              # 直接使用中文文件名，不主动进行 URL 编码
-              url = (
+              # 中文名称直接显示；特殊字符进行必要的 URL 编码
+              encoded_name = quote(name, safe="/-_.~")
+
+              raw_url = (
                   f"https://raw.githubusercontent.com/"
-                  f"{repo}/{sha}/tvbox/{name}"
+                  f"{repo}/main/tvbox/{encoded_name}"
               )
 
-              status = check_url(url)
+              proxy_url = (
+                  "https://githubproxy.cc/"
+                  + raw_url
+              )
 
               lines.extend([
                   f"## {display_name}：",
-                  "",
-                  url,
-                  "",
-                  f"检测结果：{status}",
                   ""
               ])
+
+              add_link("原始链接", raw_url)
+              add_link("代理链接", proxy_url)
 
           lines.extend([
               "# 二、apilinks.txt 原始接口",
@@ -140,7 +147,6 @@ jobs:
                       continue
 
                   name = parts[0]
-
                   urls = [
                       item for item in parts[1:]
                       if item.startswith(("http://", "https://"))
@@ -154,16 +160,15 @@ jobs:
                       ""
                   ])
 
-                  for url in urls:
-                      status = check_url(url)
-
-                      lines.extend([
-                          url,
-                          f"检测结果：{status}",
-                          ""
-                      ])
-
+                  for index, url in enumerate(urls, start=1):
+                      label = (
+                          f"原始链接 {index}"
+                          if len(urls) > 1
+                          else "原始链接"
+                      )
+                      add_link(label, url)
                       api_count += 1
+
           else:
               lines.extend([
                   "未找到 apilinks.txt。",
@@ -176,11 +181,10 @@ jobs:
           )
 
           print(f"JSON 文件数量：{len(files)}")
-          print(f"apilinks.txt 链接数量：{api_count}")
+          print(f"apilinks.txt 原始链接数量：{api_count}")
 
           if not files and api_count == 0:
               raise SystemExit("没有找到可生成的接口")
-
           PY
 
       - name: 创建 Tag 和 Release 说明
