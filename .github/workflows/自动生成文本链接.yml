@@ -16,6 +16,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
       - name: 获取仓库代码
         uses: actions/checkout@v4
@@ -29,7 +30,6 @@ jobs:
           import os
           import subprocess
           from pathlib import Path
-          from urllib.parse import quote
 
           repo = os.environ["REPO"]
           sha = os.environ["SHA"]
@@ -39,7 +39,7 @@ jobs:
               "",
               "本清单由 GitHub Actions 自动生成。",
               "",
-              "连通性为本次检测结果，网络状态可能变化。",
+              "连通性检测仅代表本次请求结果。",
               "",
               "# 一、仓库 JSON 文件",
               ""
@@ -73,13 +73,17 @@ jobs:
                           reason = f"curl 错误 {result.returncode}"
                       return f"连接失败：{reason}"
 
-                  if code.isdigit() and 200 <= int(code) < 400:
-                      return f"HTTP {code}（可访问）"
+                  if code.isdigit():
+                      number = int(code)
 
-                  if code.isdigit() and int(code) > 0:
-                      return f"HTTP {code}（需检查）"
+                      if 200 <= number < 400:
+                          return f"HTTP {code}（可访问）"
+
+                      if number > 0:
+                          return f"HTTP {code}（需检查）"
 
                   return "未获取到 HTTP 状态码"
+
               except subprocess.TimeoutExpired:
                   return "检测超时"
               except Exception as e:
@@ -93,10 +97,10 @@ jobs:
                   name[:-5] if name.endswith(".json") else name
               )
 
+              # 直接使用中文文件名，不主动进行 URL 编码
               url = (
                   f"https://raw.githubusercontent.com/"
-                  f"{repo}/{sha}/tvbox/"
-                  f"{quote(name, safe='/')}"
+                  f"{repo}/{sha}/tvbox/{name}"
               )
 
               status = check_url(url)
@@ -124,33 +128,41 @@ jobs:
               for raw_line in apifile.read_text(
                   encoding="utf-8-sig"
               ).splitlines():
+
                   line = raw_line.strip()
 
                   if not line or line.startswith("#"):
                       continue
 
-                  parts = [x.strip() for x in line.split(",")]
+                  parts = [item.strip() for item in line.split(",")]
+
                   if len(parts) < 2:
                       continue
 
                   name = parts[0]
+
                   urls = [
-                      u for u in parts[1:]
-                      if u.startswith(("http://", "https://"))
+                      item for item in parts[1:]
+                      if item.startswith(("http://", "https://"))
                   ]
 
                   if not urls:
                       continue
 
-                  lines.extend([f"## {name}：", ""])
+                  lines.extend([
+                      f"## {name}：",
+                      ""
+                  ])
 
                   for url in urls:
                       status = check_url(url)
+
                       lines.extend([
                           url,
                           f"检测结果：{status}",
                           ""
                       ])
+
                       api_count += 1
           else:
               lines.extend([
@@ -168,6 +180,7 @@ jobs:
 
           if not files and api_count == 0:
               raise SystemExit("没有找到可生成的接口")
+
           PY
 
       - name: 创建 Tag 和 Release 说明
