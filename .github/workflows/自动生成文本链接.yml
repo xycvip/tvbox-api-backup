@@ -1,4 +1,4 @@
-name: 自动生成接口清单 Tag
+name: 自动生成文本链接
 
 on:
   push:
@@ -15,6 +15,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
       - name: 获取仓库代码
         uses: actions/checkout@v4
@@ -36,6 +37,8 @@ jobs:
               "# TVBox 接口地址清单",
               "",
               "本清单由 GitHub Actions 自动生成。",
+              "",
+              "点击接口名称即可打开对应的 JSON 原始内容。",
               ""
           ]
 
@@ -47,13 +50,12 @@ jobs:
 
               url = (
                   f"https://raw.githubusercontent.com/"
-                  f"{repo}/{sha}/tvbox/{quote(name, safe='/')}"
+                  f"{repo}/{sha}/tvbox/"
+                  f"{quote(name, safe='/')}"
               )
 
               lines.extend([
-                  f"## {display_name}：",
-                  "",
-                  url,
+                  f"## [{display_name}：]({url})",
                   ""
               ])
 
@@ -65,7 +67,9 @@ jobs:
           print(f"已生成 {len(files)} 个接口地址")
 
           if not files:
-              raise SystemExit("错误：tvbox 目录中没有找到 JSON 文件")
+              raise SystemExit(
+                  "错误：tvbox 目录中没有找到 JSON 文件"
+              )
           PY
 
       - name: 创建 Tag 和 Release 说明
