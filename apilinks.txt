@@ -10,4 +10,3 @@
 # 带空格、逗号后带空格都可以，脚本会 strip
 王二小, https://9280.kstore.vip/aiwex.json, https://9280.kstore.space/aiwex.json
 南风, https://ghproxy.monkeyray.net/raw.githubusercontent.com/yoursmile66/TVBox/main/XC.json
-肥猫, http://肥猫.net/tv, http://肥猫.net
