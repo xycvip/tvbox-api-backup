@@ -1,12 +1,6 @@
 {
   "lives": [
     {
-      "name": "Guovin",
-      "url": "https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u",
-      "ua": "",
-      "source": "X4菠菜pro"
-    },
-    {
       "name": "综合直播",
       "url": "http://193.123.86.190:14888/TV/iptv.php",
       "ua": "bingcha/1.1 (mianfeifenxiang)",
@@ -43,10 +37,10 @@
       "source": "饭太硬"
     },
     {
-      "name": "superiptv",
-      "url": "http://127.0.0.1:5266/iptv.m3u",
+      "name": "Guovin",
+      "url": "https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u",
       "ua": "",
-      "source": "摸鱼"
+      "source": "X4菠菜园"
     },
     {
       "name": "Kimentanm1线",
@@ -59,6 +53,18 @@
       "url": "https://sub.ottiptv.cc/bililive.m3u",
       "ua": "okHttp/Mod-1.5.0.0",
       "source": "嗷呜"
+    },
+    {
+      "name": "Gather「果」",
+      "url": "https://tv.tmxk.kdns.fr/yplrnuc7",
+      "ua": "okhttp/3.8.1",
+      "source": "肥猫"
+    },
+    {
+      "name": "superiptv",
+      "url": "http://127.0.0.1:5266/iptv.m3u",
+      "ua": "",
+      "source": "摸鱼"
     }
   ]
 }
