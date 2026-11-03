@@ -13,7 +13,7 @@ on:
   push:
     paths:
       - 'tvbox/**'
-      - 'python/**'
+      - 'python/接口扫描处理工具.py'
       - '.github/workflows/tvbox_scan.yml'
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
       - name: 检出仓库
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: 设置 Python
         uses: actions/setup-python@v5
@@ -76,7 +76,11 @@ jobs:
             COUNT=$(git diff --cached --numstat | wc -l)
             echo "检测到 ${COUNT} 个文件变更，提交中..."
             git commit -m "chore: 自动更新聚合接口 [$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')]"
-            git push
+
+            # 先同步远程最新提交，再推送，避免并发提交造成 non-fast-forward。
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
