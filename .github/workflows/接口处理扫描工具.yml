@@ -14,6 +14,7 @@ on:
     paths:
       - 'tvbox/**'
       - 'python/接口扫描处理工具.py'
+      - '.github/workflows/接口处理扫描工具.yml'
       - '.github/workflows/tvbox_scan.yml'
 
 jobs:
