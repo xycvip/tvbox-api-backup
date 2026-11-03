@@ -1,10 +1,14 @@
-
 name: 同步 apilinks 配置
 
 on:
   schedule:
     - cron: "10 19 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/自动同步上游apilinks.yml"
+      - "python/上游源检测.py"
 
 permissions:
   contents: write
@@ -17,42 +21,55 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
       - name: 检出当前仓库
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装检测依赖
+        run: pip install requests
 
       - name: 下载上游 apilinks.txt
         run: |
           set -euo pipefail
-
           SOURCE_URL="https://raw.githubusercontent.com/lubin776/tvbox-api-backup/main/apilinks.txt"
-          TEMP_FILE="$(mktemp)"
-          trap 'rm -f "$TEMP_FILE"' EXIT
-
           curl --fail --location --silent --show-error \
             --retry 3 --retry-delay 2 \
-            "$SOURCE_URL" \
-            --output "$TEMP_FILE"
+            "$SOURCE_URL" --output apilinks.upstream.txt
 
-          if [ ! -s "$TEMP_FILE" ] ||
-             ! grep -q '[^[:space:]]' "$TEMP_FILE"; then
+          if [ ! -s apilinks.upstream.txt ] || ! grep -q '[^[:space:]]' apilinks.upstream.txt; then
             echo "::error::上游文件为空或无有效内容，取消同步"
             exit 1
           fi
+          echo "上游配置下载成功"
 
-          cp "$TEMP_FILE" apilinks.txt
-          echo "上游文件下载成功"
+      - name: 逐条检测上游源并过滤失效源
+        id: probe
+        run: |
+          set -euo pipefail
+          python python/上游源检测.py \
+            --upstream apilinks.upstream.txt \
+            --local apilinks.txt \
+            --output apilinks.filtered.txt \
+            --report upstream-source-check.txt
+
+          cat upstream-source-check.txt >> "$GITHUB_STEP_SUMMARY"
+          cp apilinks.filtered.txt apilinks.txt
 
       - name: 检查内容变化
         id: changes
         run: |
           if git diff --quiet -- apilinks.txt; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "文件没有变化，不重复生成链接"
+            echo "过滤后配置没有变化，不需要提交"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             git diff --stat -- apilinks.txt
@@ -62,12 +79,9 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- apilinks.txt
-          git commit -m "chore: 同步上游 apilinks.txt"
-
+          git commit -m "chore: 检测后同步上游 apilinks"
           git pull --rebase origin main
           git push origin HEAD:main
 
@@ -79,8 +93,8 @@ jobs:
           gh workflow run "自动生成文本链接.yml" \
             --repo "$GITHUB_REPOSITORY" \
             --ref main
-
           echo "已触发自动生成文本链接"
 
       - name: 同步结果
-        run: echo "同步流程结束"
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "检测完成，过滤后的配置与本地一致，无需同步"
