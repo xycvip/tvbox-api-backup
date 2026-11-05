@@ -1,5 +1,5 @@
 # 单 URL
-更新专用接口,https://0.12yue.de5.net/tvbox/更新专用接口.json
+更新专用接口, https://0.12yue.de5.net/tvbox/更新专用接口.json
 菠菜pro, https://0.12yue.de5.net/5/x4pro.json
 
 # 多 URL（同一名称多个镜像，脚本会自动分组去重）
