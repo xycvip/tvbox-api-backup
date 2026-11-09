@@ -1,9 +1,97 @@
 {
   "API_LIST": [
-  ["X4更新专用接口", "https://0.12yue.de5.net/0/666"],
-    ["X4菠菜pro", "https://0.12yue.de5.net/5/x4pro.json"],
-    ["X4菠菜园", "https://0.12yue.de5.net/5/x4.json"],
-    ["X4少儿频道", "https://0.12yue.de5.net/5/tv少儿.json"]
+    [
+      "幸福年年",
+      "http://150.158.52.248/tgyg/bbm.json"
+    ],
+    [
+      "嗷呜2线",
+      "https://9763.kstore.vip/aowu.json"
+    ],
+    [
+      "王二小",
+      "https://9280.kstore.vip/aiwex.json"
+    ],
+    [
+      "王二小2线",
+      "https://9280.kstore.space/aiwex.json"
+    ],
+    [
+      "香雅情",
+      "https://play.iptv365.org/香雅情/api.json"
+    ],
+    [
+      "老张",
+      "https://zhangqun1818.serv00.net/zq/api.json"
+    ],
+    [
+      "挺好",
+      "https://ztha.top/TVBox/thdjk.json"
+    ],
+    [
+      "小马",
+      "https://szyyds.cn/tv/x.json"
+    ],
+    [
+      "周J",
+      "https://gh-proxy.com/raw.githubusercontent.com/zhoujck/config/main/box"
+    ],
+    [
+      "小米",
+      "https://gh-proxy.org/raw.githubusercontent.com/ggrrttyyiii/CatVodSpider/refs/heads/main/json/demo.json"
+    ],
+    [
+      "心魔",
+      "https://gh-proxy.com/raw.githubusercontent.com/yw88075/tvbox/main/yw.json"
+    ],
+    [
+      "俊宇",
+      "http://home.jundie.top:81/top98.json"
+    ],
+    [
+      "clun",
+      "https://clun.top/box.json"
+    ],
+    [
+      "夏夏影视",
+      "https://11405.kstore.space/xiaye/qk4k.json"
+    ],
+    [
+      "凯弟3线",
+      "https://jihulab.com/jyqhkd/kd/-/raw/main/kai.json"
+    ],
+    [
+      "哈吉米",
+      "https://17264.kstore.space/哈基米.png"
+    ],
+    [
+      "真六",
+      "https://cccimg.com/down.php/7d1f30263b3f2bf3deda2d7faeef4844.zhen6"
+    ],
+    [
+      "动漫",
+      "https://www.yingm.cc/dm/dm.json"
+    ],
+    [
+      "星微Vip",
+      "https://7337.kstore.vip/xw/测试勿传"
+    ],
+    [
+      "健康家用",
+      "https://gitlab.com/noimank/tvbox/-/raw/main/tvbox1.json"
+    ],
+    [
+      "FongMI线路",
+      "https://gh-proxy.com/raw.githubusercontent.com//gaotianliuyun/gao/master/0827.json"
+    ],
+    [
+      "高天流云js",
+      "https://gh-proxy.com/raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"
+    ],
+    [
+      "凯弟1线",
+      "https://jihulab.com/jyqhkd1/kai/-/raw/main/机缘巧盒凯弟.json"
+    ]
   ],
   "API_MIRRORS": {
     "饭太硬": [
@@ -15,28 +103,25 @@
     ],
     "王二小": [
       "https://9280.kstore.vip/aiwex.json",
-      "https://9280.kstore.space/aiwex.json",
-      "http://tvbox.王二小放牛娃.top"
+      "https://9280.kstore.space/aiwex.json"
     ],
     "摸鱼": [
       "http://我不是.摸鱼儿.top",
       "http://www.y456y.com",
       "http://fish.y456y.com"
     ],
+    "肥猫": [
+      "http://肥猫.net/tv",
+      "http://肥猫.net"
+    ],
     "嗷呜": [
-      "http://www.英格里希嗷呜.top/tv",
-      "https://9763.kstore.vip/aowu.json",
-      "http://itv666.cc/aowu/config.webp"
+      "https://9763.kstore.vip/aowu.json"
     ],
     "潇洒": [
       "https://9877.kstore.space/AnotherD/api.json",
       "https://9877.kstore.space/one.json",
       "https://9877.kstore.space/sun.json",
       "https://9877.kstore.space/ONE/one.json"
-    ],
-    "肥猫": [
-      "http://肥猫.net/tv",
-      "http://肥猫.net"
     ]
   }
 }
