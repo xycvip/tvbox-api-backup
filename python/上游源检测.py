@@ -129,8 +129,10 @@ def main():
 
     local_direct = {}
     for item in local_api_list:
-        if isinstance(item, list) and len(item) >= 2 and item[0] and item[1]:
-            local_direct.setdefault(str(item[0]), []).append(str(item[1]))
+        if isinstance(item, list) and len(item) >= 2 and item[0]:
+            local_direct.setdefault(str(item[0]), []).extend(
+                str(url).strip() for url in item[1:] if str(url).strip()
+            )
 
     output_api_list = []
     output_mirrors = {}
@@ -141,26 +143,32 @@ def main():
         if not isinstance(item, list) or len(item) < 2:
             report.append(f"⏭️ 忽略格式无效的 API_LIST 条目：{item!r}")
             continue
-        name, url = str(item[0]).strip(), str(item[1]).strip()
-        if not name or not url:
+        name = str(item[0]).strip()
+        urls = [str(url).strip() for url in item[1:] if str(url).strip()]
+        if not name or not urls:
             continue
-        ok, detail = probe(url)
-        if ok:
-            output_api_list.append([name, url])
-            passed_urls += 1
+        good_urls = []
+        for url in urls:
+            ok, detail = probe(url)
+            if ok:
+                good_urls.append(url)
+                passed_urls += 1
+                report.append(f"✅ {name} | {url} | {detail}")
+            else:
+                failed_urls += 1
+                report.append(f"❌ {name} | {url} | {detail}")
+        if good_urls:
+            output_api_list.append([name] + good_urls)
             passed_groups += 1
-            report.append(f"✅ {name} | {url} | {detail}")
         else:
-            failed_urls += 1
-            report.append(f"❌ {name} | {url} | {detail}")
             old_urls = local_direct.get(name, [])
             if old_urls:
-                output_api_list.extend([[name, old_url] for old_url in old_urls])
+                output_api_list.append([name] + old_urls)
                 skipped_groups += 1
-                report.append(f"🛡️ {name}：上游检测失败，保留本地旧配置")
+                report.append(f"🛡️ {name}：上游全部检测失败，保留本地旧配置")
             else:
                 skipped_groups += 1
-                report.append(f"⏭️ {name}：上游检测失败，跳过新增")
+                report.append(f"⏭️ {name}：上游全部检测失败，跳过新增")
 
     for name, urls in upstream_mirrors.items():
         if isinstance(urls, str):
