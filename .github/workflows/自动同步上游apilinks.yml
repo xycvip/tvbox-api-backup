@@ -1,4 +1,4 @@
-name: 同步 apilinks 配置
+name: 同步 api_list.json 配置
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/自动同步上游apilinks.yml"
+      - ".github/workflows/自动同步上游api_list.yml"
       - "python/上游源检测.py"
 
 permissions:
@@ -37,15 +37,15 @@ jobs:
       - name: 安装检测依赖
         run: pip install requests
 
-      - name: 下载上游 apilinks.txt
+      - name: 下载上游 api_list.json
         run: |
           set -euo pipefail
-          SOURCE_URL="https://raw.githubusercontent.com/lubin776/tvbox-api-backup/main/apilinks.txt"
+          SOURCE_URL="https://raw.githubusercontent.com/lubin776/tvbox-api-backup/main/api_list.json"
           curl --fail --location --silent --show-error \
             --retry 3 --retry-delay 2 \
-            "$SOURCE_URL" --output apilinks.upstream.txt
+            "$SOURCE_URL" --output api_list.upstream.json
 
-          if [ ! -s apilinks.upstream.txt ] || ! grep -q '[^[:space:]]' apilinks.upstream.txt; then
+          if [ ! -s api_list.upstream.json ] || ! grep -q '[^[:space:]]' api_list.upstream.json; then
             echo "::error::上游文件为空或无有效内容，取消同步"
             exit 1
           fi
@@ -56,23 +56,23 @@ jobs:
         run: |
           set -euo pipefail
           python python/上游源检测.py \
-            --upstream apilinks.upstream.txt \
-            --local apilinks.txt \
-            --output apilinks.filtered.txt \
+            --upstream api_list.upstream.json \
+            --local api_list.json \
+            --output api_list.filtered.json \
             --report upstream-source-check.txt
 
           cat upstream-source-check.txt >> "$GITHUB_STEP_SUMMARY"
-          cp apilinks.filtered.txt apilinks.txt
+          cp api_list.filtered.json api_list.json
 
       - name: 检查内容变化
         id: changes
         run: |
-          if git diff --quiet -- apilinks.txt; then
+          if git diff --quiet -- api_list.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "过滤后配置没有变化，不需要提交"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --stat -- apilinks.txt
+            git diff --stat -- api_list.json
           fi
 
       - name: 提交并推送
@@ -80,8 +80,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- apilinks.txt
-          git commit -m "chore: 检测后同步上游 apilinks"
+          git add -- api_list.json
+          git commit -m "chore: 检测后同步上游 api_list.json"
           git pull --rebase origin main
           git push origin HEAD:main
 
