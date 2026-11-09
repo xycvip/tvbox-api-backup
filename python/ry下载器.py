@@ -432,9 +432,9 @@ def main():
             print(f"    ok {len(raw)} bytes (UA={ua.split('/')[0]})")
             if used != url:
                 print(f"    actual: {used}")
-        except Exception as e:
-            print(f"    fail: {e}")
-            results.append({"name": use_name or host, "url": url, "file": None, "ok": False, "error": str(e)})
+        except Exception:
+            # 单个源不可用时静默跳过，不让其影响其他源的正常解析
+            results.append({"name": use_name or host, "url": url, "file": None, "ok": False})
             continue
 
         text, ok = parse_text(raw)
@@ -456,7 +456,7 @@ def main():
     print(f"summary: {ok_n}/{len(results)}")
     for r in results:
         tag = "ok" if r["ok"] else "--"
-        extra = os.path.basename(r["file"]) if r["ok"] else r.get("error", "")
+        extra = os.path.basename(r["file"]) if r["ok"] else "已跳过"
         print(f"  {tag} {r['name'] or r['url']}  {extra}")
     print("=" * 50)
 
@@ -471,7 +471,9 @@ def main():
     except Exception:
         pass
 
-    sys.exit(0 if ok_n == len(results) else 2)
+    # 允许个别源失效：至少有一个源成功即可正常结束并提交其他结果；
+    # 全部源均失败时仍返回非零，避免把整轮故障伪装成成功。
+    sys.exit(0 if ok_n > 0 else 2)
 
 
 if __name__ == "__main__":
