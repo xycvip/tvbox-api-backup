@@ -3,8 +3,6 @@
 
 潇洒下载, https://9877.kstore.space/single.json
 奇奇下载, http://bd.qiqiv.cn/666.json
-菠菜园下载, https://0.12yue.de5.net/tvbox/x/lib/菠菜园下载.json
-奇奇副本, https://0.12yue.de5.net/tvbox/x/lib/666.json
 天神下载, https://cdn.jsdelivr.net/gh/IY-CPU/IY@main/天神小屋.png
 应用市场二, https://cdn.jsdelivr.net/gh/woshishiq1/hipy-drpy2@main/wzxxcz/json/market.json
 应用市场一, https://cdn.jsdelivr.net/gh/SimonWang911/simonwangsub@main/appupdate/appupdate.json
