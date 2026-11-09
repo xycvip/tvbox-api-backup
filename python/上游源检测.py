@@ -104,47 +104,75 @@ def probe(url):
     return False, last_error
 
 
-def read_sources(path):
-    result = {}
-    for line in Path(path).read_text(encoding="utf-8-sig").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "," not in stripped:
-            continue
-        parts = [part.strip() for part in stripped.split(",")]
-        name, urls = parts[0], [x for x in parts[1:] if x]
-        if name and urls:
-            result[name] = ",".join([name] + urls)
-    return result
+def read_config(path):
+    """读取 api_list.json，返回规范化的 API_LIST / API_MIRRORS。"""
+    config = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if not isinstance(config, dict):
+        raise ValueError("配置根节点必须是 JSON 对象")
+    api_list = config.get("API_LIST", [])
+    api_mirrors = config.get("API_MIRRORS", {})
+    if not isinstance(api_list, list) or not isinstance(api_mirrors, dict):
+        raise ValueError("API_LIST 必须是数组，API_MIRRORS 必须是对象")
+    return api_list, api_mirrors
 
 
 def main():
-    parser = argparse.ArgumentParser(description="逐条检测上游 TVBox 源")
+    parser = argparse.ArgumentParser(description="逐条检测上游 TVBox api_list.json")
     parser.add_argument("--upstream", required=True)
     parser.add_argument("--local", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--report", required=True)
     args = parser.parse_args()
 
-    local_sources = read_sources(args.local)
-    upstream_lines = Path(args.upstream).read_text(encoding="utf-8-sig").splitlines()
-    output_lines = []
+    local_api_list, local_mirrors = read_config(args.local)
+    upstream_api_list, upstream_mirrors = read_config(args.upstream)
+
+    local_direct = {}
+    for item in local_api_list:
+        if isinstance(item, list) and len(item) >= 2 and item[0] and item[1]:
+            local_direct.setdefault(str(item[0]), []).append(str(item[1]))
+
+    output_api_list = []
+    output_mirrors = {}
     report = []
-    passed_sources = skipped_sources = passed_urls = failed_urls = 0
+    passed_groups = skipped_groups = passed_urls = failed_urls = 0
 
-    for line in upstream_lines:
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "," not in stripped:
-            output_lines.append(line)
+    for item in upstream_api_list:
+        if not isinstance(item, list) or len(item) < 2:
+            report.append(f"⏭️ 忽略格式无效的 API_LIST 条目：{item!r}")
             continue
-
-        parts = [part.strip() for part in stripped.split(",")]
-        name, urls = parts[0], [x for x in parts[1:] if x]
-        if not name or not urls:
-            output_lines.append(line)
+        name, url = str(item[0]).strip(), str(item[1]).strip()
+        if not name or not url:
             continue
+        ok, detail = probe(url)
+        if ok:
+            output_api_list.append([name, url])
+            passed_urls += 1
+            passed_groups += 1
+            report.append(f"✅ {name} | {url} | {detail}")
+        else:
+            failed_urls += 1
+            report.append(f"❌ {name} | {url} | {detail}")
+            old_urls = local_direct.get(name, [])
+            if old_urls:
+                output_api_list.extend([[name, old_url] for old_url in old_urls])
+                skipped_groups += 1
+                report.append(f"🛡️ {name}：上游检测失败，保留本地旧配置")
+            else:
+                skipped_groups += 1
+                report.append(f"⏭️ {name}：上游检测失败，跳过新增")
 
+    for name, urls in upstream_mirrors.items():
+        if isinstance(urls, str):
+            urls = [urls]
+        if not isinstance(urls, list):
+            report.append(f"⏭️ {name}：镜像配置格式无效，跳过")
+            continue
         good_urls = []
         for url in urls:
+            url = str(url).strip()
+            if not url:
+                continue
             ok, detail = probe(url)
             if ok:
                 good_urls.append(url)
@@ -155,27 +183,34 @@ def main():
                 report.append(f"❌ {name} | {url} | {detail}")
 
         if good_urls:
-            output_lines.append(", ".join([name] + good_urls))
-            passed_sources += 1
-        elif name in local_sources:
-            # 上游整组失效时保留本地旧配置，避免一次网络故障把可用源覆盖掉。
-            output_lines.append(local_sources[name])
-            skipped_sources += 1
-            report.append(f"🛡️ {name}：上游全部检测失败，保留本地旧配置")
+            output_mirrors[name] = good_urls
+            passed_groups += 1
+        elif name in local_mirrors:
+            output_mirrors[name] = local_mirrors[name]
+            skipped_groups += 1
+            report.append(f"🛡️ {name}：上游镜像全部检测失败，保留本地旧配置")
         else:
-            skipped_sources += 1
-            report.append(f"⏭️ {name}：上游全部检测失败，跳过新增")
+            skipped_groups += 1
+            report.append(f"⏭️ {name}：上游镜像全部检测失败，跳过新增")
 
-    Path(args.output).write_text("\n".join(output_lines).rstrip() + "\n", encoding="utf-8")
+    output_config = {
+        "API_LIST": output_api_list,
+        "API_MIRRORS": output_mirrors,
+    }
+    Path(args.output).write_text(
+        json.dumps(output_config, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
     summary = [
-        f"上游源检测：通过 {passed_sources} 组，跳过/保留旧配置 {skipped_sources} 组",
+        f"上游源检测：通过 {passed_groups} 组，跳过/保留旧配置 {skipped_groups} 组",
         f"URL 检测：通过 {passed_urls} 条，失败 {failed_urls} 条",
         "",
         *report,
     ]
     Path(args.report).write_text("\n".join(summary) + "\n", encoding="utf-8")
     print("\n".join(summary))
-    if passed_sources == 0 and not local_sources:
+    if passed_groups == 0 and not local_api_list and not local_mirrors:
         print("没有任何可用源，终止同步。", file=sys.stderr)
         return 2
     return 0
